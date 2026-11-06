@@ -1,0 +1,8 @@
+name = "drive-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-21"
+workers_dev = false
+
+[[routes]]
+pattern = "drive.rojiura.app"
+custom_domain = true
