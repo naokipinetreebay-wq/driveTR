@@ -4,6 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useMemo } from "react";
 import { SessionExit } from "@/components/SessionExit";
 import { slotCaption, slotForPlace } from "@/lib/placement";
+import { displayJoinUrl } from "@/lib/roomCode";
 import {
   MAX_INTERVAL,
   MIN_INTERVAL,
@@ -30,7 +31,7 @@ export function ControllerPanel({
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/d/?code=${snapshot.code}`;
+    return displayJoinUrl(snapshot.code);
   }, [snapshot.code]);
   const counts = activeCounts(cfg);
   const needed = neededPhones(cfg);
