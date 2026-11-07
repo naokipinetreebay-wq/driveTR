@@ -19,6 +19,8 @@ export type TrCreative = {
   kind: string;
   title: string;
   url: string;
+  mediaUrl?: string;
+  mediaType?: string;
   durationSeconds: number;
   skippable: boolean;
 };

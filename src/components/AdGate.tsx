@@ -47,6 +47,18 @@ export function AdGate({
         <p className="muted">
           部屋を作る前に、約{current.durationSeconds}秒の案内です。急ぐ場合はスキップできます（あとでまとめて見てもらいます）。
         </p>
+        {current.mediaUrl ? (
+          <video
+            key={current.mediaUrl + index}
+            className="ad-video"
+            src={current.mediaUrl}
+            controls
+            playsInline
+            autoPlay
+            preload="metadata"
+            onEnded={() => finishOne(false)}
+          />
+        ) : null}
         <div className="home-actions">
           <a className="btn primary" href={current.url} target="_blank" rel="noreferrer">
             GameChopを見る

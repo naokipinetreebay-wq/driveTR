@@ -282,3 +282,12 @@ button, input, select { font: inherit; }
   font-weight: 800;
   cursor: pointer;
 }
+
+.ad-video {
+  display: block;
+  width: 100%;
+  max-height: 52vh;
+  margin: 8px 0 18px;
+  border-radius: 10px;
+  background: #0a0a0a;
+}
