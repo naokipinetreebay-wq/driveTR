@@ -320,3 +320,18 @@ a.ad-video-hit {
   text-decoration: none;
   box-sizing: border-box;
 }
+
+.ad-audio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+.ad-audio-row .ad-video-hit {
+  flex: 1 1 12rem;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
