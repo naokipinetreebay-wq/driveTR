@@ -7,10 +7,12 @@ const PING_MS = 12_000;
 const RETRY_BASE_MS = 600;
 const RETRY_MAX_MS = 8_000;
 
+/** ルーム／WS は Cloudflare（tr-api）。UI は当面 Render。 */
+export const TR_ROOMS_HOST = "tr-api.rojiura.app";
+
 function wsUrl(room: string, role: Role, deviceId: string): string {
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const q = new URLSearchParams({ room, role, deviceId });
-  return `${proto}//${window.location.host}/ws?${q}`;
+  const q = new URLSearchParams({ room, role, deviceId, app: "drive" });
+  return `wss://${TR_ROOMS_HOST}/ws?${q}`;
 }
 
 export function useDeviceId(key: string): string {
@@ -152,7 +154,11 @@ export function useRoomSocket(room: string, role: Role, deviceId: string) {
 }
 
 export async function createRoom(): Promise<string> {
-  const res = await fetch("/api/rooms", { method: "POST" });
+  const res = await fetch(`https://${TR_ROOMS_HOST}/v1/rooms`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ app: "drive" }),
+  });
   if (!res.ok) throw new Error("ルーム作成に失敗しました");
   const data = (await res.json()) as { code: string };
   return data.code;
