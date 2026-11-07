@@ -30,7 +30,7 @@ export function ControllerPanel({
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/d/${snapshot.code}`;
+    return `${window.location.origin}/d/?code=${snapshot.code}`;
   }, [snapshot.code]);
   const counts = activeCounts(cfg);
   const needed = neededPhones(cfg);

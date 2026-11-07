@@ -14,7 +14,7 @@ export default function HomePage() {
   const [bootstrap, setBootstrap] = useState<TrBootstrapResponse | null>(null);
 
   const goRoom = (code: string) => {
-    router.push(`/r/${code}`);
+    router.push(`/r/?code=${code}`);
   };
 
   const onCreate = async () => {

@@ -1,12 +1,11 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { DisplayScreen } from "@/components/DisplayScreen";
+import { useRoomCode } from "@/lib/roomCode";
 import { useDeviceId, useRoomSocket } from "@/lib/ws";
 
 export default function DisplayPage() {
-  const params = useParams<{ code: string }>();
-  const code = String(params.code || "").toUpperCase();
+  const code = useRoomCode();
   const deviceId = useDeviceId(`display-${code}`);
   const { snapshot, error, connected, send } = useRoomSocket(code, "display", deviceId);
 
