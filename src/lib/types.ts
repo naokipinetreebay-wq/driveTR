@@ -20,6 +20,20 @@ export interface DisplayInfo {
   signal: Signal | null;
 }
 
+/** 開始時に一度配り、端末時計で再生する出題一式 */
+export interface PlayFrame {
+  frameStartedAt: number;
+  activeLine: number;
+  greens: number[];
+  /** 端末 id → 信号。コントローラは "controller" */
+  signals: Record<string, Signal | null>;
+}
+
+export interface PlayPackage {
+  intervalMs: number;
+  frames: PlayFrame[];
+}
+
 export interface RoomSnapshot {
   code: string;
   config: RoomConfig;
@@ -28,6 +42,8 @@ export interface RoomSnapshot {
   /** 今、色を出している列。0が1列目 */
   activeLine: number | null;
   frameStartedAt: number | null;
+  /** あるときは端末側再生の正本 */
+  playPackage: PlayPackage | null;
   serverNow: number;
 }
 

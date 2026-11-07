@@ -6,6 +6,7 @@ import { ColorScreen } from "@/components/ColorScreen";
 import { ControllerPanel } from "@/components/ControllerPanel";
 import { SetupWizard } from "@/components/SetupWizard";
 import { slotCaption } from "@/lib/placement";
+import { useDrivePlayView } from "@/lib/playView";
 import { neededPhones } from "@/lib/types";
 import { useDeviceId, useRoomSocket } from "@/lib/ws";
 
@@ -14,6 +15,7 @@ export default function ControllerPage() {
   const code = String(params.code || "").toUpperCase();
   const deviceId = useDeviceId(`controller-${code}`);
   const { snapshot, error, connected, send } = useRoomSocket(code, "controller", deviceId);
+  const playView = useDrivePlayView(snapshot, "controller");
 
   const wizardKey = `dv-wizard-done-${code}`;
   const [ready, setReady] = useState(false);
@@ -71,15 +73,15 @@ export default function ControllerPage() {
     );
   }
 
-  if (view === "play" && snapshot.config.running) {
+  if (view === "play" && (snapshot.config.running || playView.running)) {
     return (
       <ColorScreen
-        signal={snapshot.controllerSignal}
+        signal={playView.signal}
         title="この端末"
         detail={slotCaption({ no: 1, row: 1, index: 0, controller: true })}
         sound={false}
-        frameStartedAt={snapshot.frameStartedAt}
-        running
+        frameStartedAt={playView.frameStartedAt}
+        running={playView.running || snapshot.config.running}
         onStop={() => {
           send({ type: "stop" });
           setView("control");

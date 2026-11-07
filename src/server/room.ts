@@ -10,6 +10,8 @@ import {
   clamp,
   neededPhones,
   type DisplayInfo,
+  type PlayFrame,
+  type PlayPackage,
   type RoomConfig,
   type RoomSnapshot,
   type Signal,
@@ -17,6 +19,8 @@ import {
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_TTL_MS = 90 * 60 * 1000;
+const CONTROLLER_ID = "controller";
+const PACKAGE_LAPS = 12;
 
 function randomCode(length = 6): string {
   let out = "";
@@ -48,12 +52,14 @@ export class Room {
   activeLine: number | null = null;
   greens: number[] = [];
   frameStartedAt: number | null = null;
+  playPackage: PlayPackage | null = null;
   lastActivity = Date.now();
   rng: () => number = Math.random;
 
   private signals = new Map<string, Signal | null>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private counts: number[] = [];
+  private packageIndex = 0;
 
   constructor(code: string) {
     this.code = code;
@@ -162,11 +168,21 @@ export class Room {
     }
     this.clearTimer();
     this.counts = activeCounts(this.config);
-    this.greens = buildPass(this.counts, this.rng);
-    this.activeLine = 0;
     this.config.running = true;
+    this.packageIndex = 0;
+    this.playPackage = {
+      intervalMs: this.config.intervalSeconds * 1000,
+      frames: this.buildFrames(Date.now(), PACKAGE_LAPS),
+    };
     this.touch();
-    this.showLine(Date.now());
+    const first = this.playPackage.frames[0];
+    if (!first) {
+      this.stop();
+      return;
+    }
+    this.applyFrame(first);
+    this.armPackage();
+    this.broadcast();
   }
 
   stop() {
@@ -177,42 +193,114 @@ export class Room {
     this.greens = [];
     this.signals.clear();
     this.frameStartedAt = null;
+    this.playPackage = null;
+    this.packageIndex = 0;
     this.touch();
     this.broadcast();
   }
 
-  private showLine(at: number) {
-    const line = this.activeLine ?? 0;
-    const greenAt = this.greens[line] ?? 0;
-    this.signals.clear();
-    this.controllerSignal = null;
+  private computeSignals(line: number, greenAt: number): Record<string, Signal | null> {
+    const signals: Record<string, Signal | null> = {};
     for (const slot of slotsFor(this.counts)) {
       const signal: Signal | null =
         slot.row === line + 1 ? (slot.index === greenAt ? "green" : "red") : null;
       if (slot.controller) {
-        this.controllerSignal = signal;
+        signals[CONTROLLER_ID] = signal;
         continue;
       }
       const display = [...this.displays.values()].find((d) => d.place === slot.no);
-      if (display) this.signals.set(display.id, signal);
+      if (display) signals[display.id] = signal;
     }
-    this.frameStartedAt = at;
-    this.broadcast();
-    const wait = Math.max(0, at + this.config.intervalSeconds * 1000 - Date.now());
-    this.timer = setTimeout(() => this.nextLine(), wait);
+    return signals;
+  }
+
+  private buildFrames(startAt: number, laps: number): PlayFrame[] {
+    const intervalMs = this.config.intervalSeconds * 1000;
+    const frames: PlayFrame[] = [];
+    let at = startAt;
+    for (let lap = 0; lap < laps; lap++) {
+      const greens = buildPass(this.counts, this.rng);
+      for (let line = 0; line < this.counts.length; line++) {
+        frames.push({
+          frameStartedAt: at,
+          activeLine: line,
+          greens: [...greens],
+          signals: this.computeSignals(line, greens[line] ?? 0),
+        });
+        at += intervalMs;
+      }
+    }
+    return frames;
+  }
+
+  private applyFrame(frame: PlayFrame) {
+    this.activeLine = frame.activeLine;
+    this.greens = [...frame.greens];
+    this.frameStartedAt = frame.frameStartedAt;
+    this.signals.clear();
+    this.controllerSignal = frame.signals[CONTROLLER_ID] ?? null;
+    for (const [id, signal] of Object.entries(frame.signals)) {
+      if (id === CONTROLLER_ID) continue;
+      this.signals.set(id, signal);
+    }
+  }
+
+  private armPackage() {
+    this.clearTimer();
+    if (!this.config.running || !this.playPackage) return;
+    const nextIndex = this.packageIndex + 1;
+    if (nextIndex >= this.playPackage.frames.length) {
+      const last = this.playPackage.frames[this.playPackage.frames.length - 1];
+      const more = this.buildFrames(
+        last.frameStartedAt + this.playPackage.intervalMs,
+        PACKAGE_LAPS
+      );
+      const kept = this.playPackage.frames.slice(-this.counts.length);
+      this.playPackage = {
+        intervalMs: this.playPackage.intervalMs,
+        frames: [...kept, ...more],
+      };
+      this.packageIndex = Math.max(0, kept.length - 1);
+    }
+    const next = this.playPackage.frames[this.packageIndex + 1];
+    if (!next) return;
+    const wait = Math.max(0, next.frameStartedAt - Date.now());
+    this.timer = setTimeout(() => {
+      if (!this.config.running || !this.playPackage) return;
+      this.packageIndex += 1;
+      const frame = this.playPackage.frames[this.packageIndex];
+      if (!frame) return;
+      this.applyFrame(frame);
+      this.armPackage();
+      this.broadcast();
+    }, wait);
   }
 
   nextLine() {
-    if (!this.config.running) return;
+    if (!this.config.running || !this.playPackage) return;
     this.clearTimer();
-    const next = (this.activeLine ?? 0) + 1;
-    if (next >= this.counts.length) {
-      this.greens = buildPass(this.counts, this.rng);
-      this.activeLine = 0;
-    } else {
-      this.activeLine = next;
+    const nextIndex = this.packageIndex + 1;
+    if (nextIndex >= this.playPackage.frames.length) {
+      const last = this.playPackage.frames[this.playPackage.frames.length - 1];
+      const more = this.buildFrames(
+        Date.now(),
+        PACKAGE_LAPS
+      );
+      this.playPackage = {
+        intervalMs: this.playPackage.intervalMs,
+        frames: more,
+      };
+      this.packageIndex = 0;
+      this.applyFrame(more[0]);
+      this.armPackage();
+      this.broadcast();
+      void last;
+      return;
     }
-    this.showLine(Date.now());
+    this.packageIndex = nextIndex;
+    this.applyFrame(this.playPackage.frames[nextIndex]);
+    this.armPackage();
+    this.broadcast();
   }
 
   private clearTimer() {
@@ -235,6 +323,7 @@ export class Room {
       controllerSignal: this.config.running ? this.controllerSignal : null,
       activeLine: this.config.running ? this.activeLine : null,
       frameStartedAt: this.config.running ? this.frameStartedAt : null,
+      playPackage: this.config.running ? this.playPackage : null,
       serverNow: Date.now(),
     };
   }
