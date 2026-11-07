@@ -6,4 +6,10 @@
 
 1列を出しておく時間は2〜10秒。停止するまで繰り返す。止めるとコントローラはメニューに戻り、ほかの端末は無色になる。
 
-ローカル確認: `npm test`、`npm run dev`。公開はまだしない。
+ローカル確認: `npm test`、`npm run dev`。
+
+## 公開 URL
+
+https://tr.rojiura.app/drive/  
+ルーム／WS: https://tr-api.rojiura.app  
+旧ホスト `https://drive.rojiura.app` は新 URL へ 301 します。

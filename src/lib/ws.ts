@@ -7,7 +7,7 @@ const PING_MS = 12_000;
 const RETRY_BASE_MS = 600;
 const RETRY_MAX_MS = 8_000;
 
-/** ルーム／WS は Cloudflare（tr-api）。UI は当面 Render。 */
+/** ルーム／WS は Cloudflare（tr-api）。UI は Pages（tr.rojiura.app）。 */
 export const TR_ROOMS_HOST = "tr-api.rojiura.app";
 
 function wsUrl(room: string, role: Role, deviceId: string): string {
