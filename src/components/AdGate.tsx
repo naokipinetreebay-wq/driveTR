@@ -45,24 +45,33 @@ export function AdGate({
         <p className="eyebrow">お知らせ</p>
         <h1>{current.title}</h1>
         <p className="muted">
-          部屋を作る前に、約{current.durationSeconds}秒の案内です。急ぐ場合はスキップできます（あとでまとめて見てもらいます）。
+          部屋を作る前に、約{current.durationSeconds}秒の案内です。急ぐ場合はスキップできます。
         </p>
         {current.mediaUrl ? (
-          <video
-            key={current.mediaUrl + index}
-            className="ad-video"
-            src={current.mediaUrl}
-            controls
-            playsInline
-            autoPlay
-            preload="metadata"
-            onEnded={() => finishOne(false)}
-          />
+          <div className="ad-video-wrap">
+            <video
+              key={current.mediaUrl + index}
+              className="ad-video"
+              src={current.mediaUrl}
+              controls
+              playsInline
+              autoPlay
+              preload="auto"
+              onEnded={() => finishOne(false)}
+            />
+            {current.url ? (
+              <a
+                className="ad-video-hit"
+                href={current.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                動画の続き・詳細はこちら（{current.title}）
+              </a>
+            ) : null}
+          </div>
         ) : null}
         <div className="home-actions">
-          <a className="btn primary" href={current.url} target="_blank" rel="noreferrer">
-            GameChopを見る
-          </a>
           <button type="button" className="btn primary" onClick={() => finishOne(false)}>
             見た・次へ
           </button>
