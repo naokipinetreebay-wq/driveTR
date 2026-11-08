@@ -84,6 +84,7 @@ export default function HomePage() {
         bootstrap={bootstrap}
         busy={busy}
         error={error}
+        app={APP}
         onDone={() => {
           if (busy) return;
           void createAndEnter();

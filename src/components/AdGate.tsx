@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   addSkipDebt,
   markAdSeen,
+  postStatsEvent,
   repaySkipDebt,
   type TrBootstrapResponse,
   type TrCreative,
@@ -15,12 +16,14 @@ export function AdGate({
   doneLabel = "ルームを作成",
   busy = false,
   error = null,
+  app = "drive",
 }: {
   bootstrap: TrBootstrapResponse;
   onDone: () => void;
   doneLabel?: string;
   busy?: boolean;
   error?: string | null;
+  app?: string;
 }) {
   const creatives = bootstrap.ad.creatives.slice(0, Math.max(1, bootstrap.ad.count));
   const [index, setIndex] = useState(0);
@@ -41,6 +44,16 @@ export function AdGate({
   }, [muted, phase, index]);
 
   const finishOne = (skipped: boolean) => {
+    const creative = creatives[index];
+    void postStatsEvent({
+      type: skipped ? "ad_skip" : "ad_impression",
+      client: { app },
+      payload: {
+        creativeId: creative?.id,
+        index,
+        count: creatives.length,
+      },
+    });
     if (skipped) addSkipDebt(1);
     else {
       markAdSeen();
