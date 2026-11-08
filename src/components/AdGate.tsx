@@ -12,13 +12,19 @@ import {
 export function AdGate({
   bootstrap,
   onDone,
+  doneLabel = "ルームを作成",
+  busy = false,
+  error = null,
 }: {
   bootstrap: TrBootstrapResponse;
   onDone: () => void;
+  doneLabel?: string;
+  busy?: boolean;
+  error?: string | null;
 }) {
   const creatives = bootstrap.ad.creatives.slice(0, Math.max(1, bootstrap.ad.count));
   const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<"prompt" | "playing">("prompt");
+  const [phase, setPhase] = useState<"prompt" | "playing" | "thanks">("prompt");
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const current = creatives[index] as TrCreative | undefined;
@@ -42,7 +48,7 @@ export function AdGate({
     }
     if (index + 1 >= creatives.length) {
       if (!skipped) markAdSeen();
-      onDone();
+      setPhase("thanks");
       return;
     }
     setIndex(index + 1);
@@ -50,9 +56,50 @@ export function AdGate({
     setMuted(true);
   };
 
+  const thanksCard = (creative?: TrCreative) => (
+    <main className="home">
+      <div className="home-card">
+        <p className="eyebrow">広告</p>
+        <h1>ありがとうございました</h1>
+        <p className="muted">ご視聴ありがとうございます。準備ができたらルームを作成してください。</p>
+        {creative?.mediaUrl ? (
+          <div className="ad-video-wrap">
+            <video
+              className="ad-video"
+              src={creative.mediaUrl}
+              playsInline
+              muted
+              preload="metadata"
+            />
+            {creative.url ? (
+              <div className="ad-audio-row">
+                <a className="ad-video-hit" href={creative.url} target="_blank" rel="noreferrer">
+                  詳細（{creative.title}）
+                </a>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="home-actions">
+          <button type="button" className="btn primary" disabled={busy} onClick={onDone}>
+            {busy ? "作成中…" : doneLabel}
+          </button>
+        </div>
+        {error ? (
+          <p className="muted" style={{ marginTop: 12, color: "var(--bad)" }}>
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </main>
+  );
+
   if (!current) {
-    onDone();
-    return null;
+    return thanksCard();
+  }
+
+  if (phase === "thanks") {
+    return thanksCard(current);
   }
 
   if (phase === "prompt") {
