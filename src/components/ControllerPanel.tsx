@@ -1,5 +1,7 @@
 "use client";
 
+import { NumberSelect } from "@/components/NumberSelect";
+
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo } from "react";
 import { SessionExit } from "@/components/SessionExit";
@@ -104,27 +106,23 @@ export function ControllerPanel({
             <span>
               {row + 1}列目: {count}枚
             </span>
-            <input
-              type="range"
+            <NumberSelect
               min={2}
               max={4}
               step={1}
               value={count}
-              disabled={cfg.running}
-              onChange={(e) => setCount(row, Number(e.target.value))}
+              onChange={(n) => setCount(row, n)}
             />
           </label>
         ))}
         <label className="field">
           <span>1列の表示: {cfg.intervalSeconds}秒</span>
-          <input
-            type="range"
+          <NumberSelect
             min={MIN_INTERVAL}
             max={MAX_INTERVAL}
             step={1}
             value={cfg.intervalSeconds}
-            disabled={cfg.running}
-            onChange={(e) => patch({ intervalSeconds: Number(e.target.value) })}
+            onChange={(n) => patch({ intervalSeconds: n })}
           />
         </label>
         <p className="muted">{ready ? "停止するまで繰り返します。" : `この端末を含めて ${needed} 台必要です。`}</p>

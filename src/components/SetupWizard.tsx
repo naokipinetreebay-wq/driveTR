@@ -1,5 +1,7 @@
 "use client";
 
+import { NumberSelect } from "@/components/NumberSelect";
+
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { PlacementMap } from "@/components/PlacementMap";
@@ -109,25 +111,23 @@ export function SetupWizard({
                 <span>
                   {row + 1}列目: {count}枚
                 </span>
-                <input
-                  type="range"
+                <NumberSelect
                   min={2}
                   max={4}
                   step={1}
                   value={count}
-                  onChange={(e) => setCount(row, Number(e.target.value))}
+                  onChange={(n) => setCount(row, n)}
                 />
               </label>
             ))}
             <label className="field">
               <span>1列の表示: {cfg.intervalSeconds}秒</span>
-              <input
-                type="range"
+              <NumberSelect
                 min={MIN_INTERVAL}
                 max={MAX_INTERVAL}
                 step={1}
                 value={cfg.intervalSeconds}
-                onChange={(e) => patch({ intervalSeconds: Number(e.target.value) })}
+                onChange={(n) => patch({ intervalSeconds: n })}
               />
             </label>
             <p className="muted">必要な端末は {needed} 台です。この端末を含みます。</p>
