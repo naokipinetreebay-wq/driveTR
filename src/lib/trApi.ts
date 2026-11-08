@@ -3,11 +3,21 @@
 export const TR_API_BASE = "https://tr-api.rojiura.app";
 
 const PROFILE_KEY = "pt-tr-profile";
+/** completed / declined / snoozed（再掲制御）。識別子ではない */
+const PROFILE_GATE_KEY = "pt-tr-profile-gate";
 /** この端末から一度でも bootstrap したか（未保存＝初回端末リクエストの判定用。識別子ではない） */
 const SEEN_KEY = "pt-tr-seen";
 const REGISTERED_AT_KEY = "pt-tr-registered-at";
 const AD_LAST_KEY = "pt-tr-ad-last";
 const AD_SKIP_KEY = "pt-tr-ad-skip";
+
+const PROFILE_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+const PROFILE_SNOOZE_MAX = 3;
+
+type ProfileGateState =
+  | { status: "completed" }
+  | { status: "declined" }
+  | { status: "snoozed"; snoozeUntil: number; snoozeCount: number };
 
 export type TrProfile = {
   userAgeBand?: string;
@@ -61,10 +71,69 @@ export function saveProfile(profile: TrProfile) {
   }
 }
 
-/** 利用状況の確認画面を一度でも出したか（スキップ含む） */
-export function isProfilePromptDone(): boolean {
+function loadProfileGate(): ProfileGateState | null {
   try {
-    return localStorage.getItem(PROFILE_KEY) !== null;
+    const raw = localStorage.getItem(PROFILE_GATE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as ProfileGateState;
+  } catch {
+    return null;
+  }
+}
+
+function saveProfileGate(state: ProfileGateState) {
+  localStorage.setItem(PROFILE_GATE_KEY, JSON.stringify(state));
+}
+
+/** アンケートを保存して完了（再掲なし） */
+export function completeProfilePrompt(profile: TrProfile) {
+  saveProfile(profile);
+  saveProfileGate({ status: "completed" });
+}
+
+/** 「協力しない」— 再掲なし */
+export function declineProfilePrompt() {
+  saveProfileGate({ status: "declined" });
+}
+
+/**
+ * 「今は忙しい」— 1週間後に再掲。3回目で以降は出さない。
+ */
+export function snoozeProfilePrompt() {
+  const prev = loadProfileGate();
+  const count =
+    prev?.status === "snoozed" && Number.isFinite(prev.snoozeCount)
+      ? prev.snoozeCount + 1
+      : 1;
+  if (count >= PROFILE_SNOOZE_MAX) {
+    saveProfileGate({ status: "declined" });
+    return;
+  }
+  saveProfileGate({
+    status: "snoozed",
+    snoozeUntil: Date.now() + PROFILE_SNOOZE_MS,
+    snoozeCount: count,
+  });
+}
+
+/**
+ * 利用状況画面を出すか。
+ * 旧仕様で profile だけ保存済みの端末は再掲しない。
+ */
+export function shouldShowProfilePrompt(): boolean {
+  try {
+    const gate = loadProfileGate();
+    if (!gate) {
+      return localStorage.getItem(PROFILE_KEY) === null;
+    }
+    if (gate.status === "completed" || gate.status === "declined") {
+      return false;
+    }
+    if (gate.status === "snoozed") {
+      if (gate.snoozeCount >= PROFILE_SNOOZE_MAX) return false;
+      return Date.now() >= gate.snoozeUntil;
+    }
+    return true;
   } catch {
     return false;
   }

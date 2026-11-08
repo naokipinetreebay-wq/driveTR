@@ -6,7 +6,7 @@ import { AdGate } from "@/components/AdGate";
 import { ProfileGate } from "@/components/ProfileGate";
 import {
   bootstrapSession,
-  isProfilePromptDone,
+  shouldShowProfilePrompt,
   type TrBootstrapResponse,
 } from "@/lib/trApi";
 import { createRoom } from "@/lib/ws";
@@ -56,7 +56,7 @@ export default function HomePage() {
   };
 
   const onStart = async () => {
-    if (!isProfilePromptDone()) {
+    if (shouldShowProfilePrompt()) {
       continueAfterProfile.current = true;
       setNeedProfile(true);
       return;

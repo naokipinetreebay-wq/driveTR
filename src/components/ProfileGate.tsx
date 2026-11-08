@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { saveProfile, type TrProfile } from "@/lib/trApi";
+import {
+  completeProfilePrompt,
+  declineProfilePrompt,
+  snoozeProfilePrompt,
+  type TrProfile,
+} from "@/lib/trApi";
 
 const AGE_BANDS = [
   { value: "10s", label: "10代" },
@@ -124,11 +129,6 @@ export function ProfileGate({ onDone }: { onDone: () => void }) {
     []
   );
 
-  const finish = (profile: TrProfile) => {
-    saveProfile(profile);
-    onDone();
-  };
-
   const onSave = () => {
     const profile: TrProfile = {};
     if (userAgeBand) profile.userAgeBand = userAgeBand;
@@ -136,7 +136,18 @@ export function ProfileGate({ onDone }: { onDone: () => void }) {
     if (groupSizeBand) profile.groupSizeBand = groupSizeBand;
     if (prefecture) profile.prefecture = prefecture;
     if (traineeAgeBand) profile.traineeAgeBand = traineeAgeBand;
-    finish(profile);
+    completeProfilePrompt(profile);
+    onDone();
+  };
+
+  const onBusy = () => {
+    snoozeProfilePrompt();
+    onDone();
+  };
+
+  const onDecline = () => {
+    declineProfilePrompt();
+    onDone();
   };
 
   return (
@@ -148,7 +159,7 @@ export function ProfileGate({ onDone }: { onDone: () => void }) {
           本アプリは無料で使えます。営利を第一にはしていません。利用者の方に役立つ情報や体験をお届けすることに努めています。運営は広告収入で支えているため、ときどき短い広告をご覧いただき、無料運営へのご協力をお願いします。
         </p>
         <p className="muted">
-          ご入力内容はご利用の端末にだけ保存し、サーバーには保存しません。どんなタイプの方がどれくらい使っているか、という統計（ご利用回数のカウント）にのみ使います。スキップしても利用できますが、より良いサービスをお届けするため、できる範囲でご協力いただけると嬉しいです。
+          ご入力内容はご利用の端末にだけ保存し、サーバーには保存しません。どんなタイプの方がどれくらい使っているか、という統計（ご利用回数のカウント）にのみ使います。今は忙しい場合は後からでも大丈夫です。より良いサービスをお届けするため、できる範囲でご協力いただけると嬉しいです。
         </p>
 
         <div className="profile-fields">
@@ -188,8 +199,11 @@ export function ProfileGate({ onDone }: { onDone: () => void }) {
           <button type="button" className="btn primary" onClick={onSave}>
             保存して続ける
           </button>
-          <button type="button" className="btn" onClick={() => finish({})}>
-            スキップ
+          <button type="button" className="btn" onClick={onBusy}>
+            今は忙しい
+          </button>
+          <button type="button" className="btn" onClick={onDecline}>
+            協力しない
           </button>
         </div>
       </div>
