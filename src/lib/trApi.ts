@@ -51,6 +51,16 @@ export function saveProfile(profile: TrProfile) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
+/** 利用状況の確認画面を一度でも出したか（スキップ含む） */
+export function isProfilePromptDone(): boolean {
+  try {
+    return localStorage.getItem(PROFILE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+
 export function loadAdState() {
   const lastAdAt = Number(localStorage.getItem(AD_LAST_KEY));
   const skipDebt = Number(localStorage.getItem(AD_SKIP_KEY));

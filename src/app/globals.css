@@ -123,6 +123,13 @@ button, input, select { font: inherit; }
 .grid-2 { display: grid; gap: 14px; }
 @media (min-width: 800px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
 
+
+.profile-fields {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
 .field { display: grid; gap: 6px; margin-bottom: 12px; }
 .field input[type="range"], .field select, .label-input {
   width: 100%;
