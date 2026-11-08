@@ -143,6 +143,7 @@ export function ProfileGate({ onDone }: { onDone: () => void }) {
     <main className="home">
       <div className="home-card">
         <h1>初めてご利用される方へ</h1>
+        <p className="muted">短いアンケートへのご協力をお願いします。</p>
         <p className="muted">
           本アプリは無料で使えます。営利を第一にはしていません。利用者の方に役立つ情報や体験をお届けすることに努めています。運営は広告収入で支えているため、ときどき短い広告をご覧いただき、無料運営へのご協力をお願いします。
         </p>
