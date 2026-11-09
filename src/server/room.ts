@@ -53,6 +53,16 @@ export class Room {
   greens: number[] = [];
   frameStartedAt: number | null = null;
   playPackage: PlayPackage | null = null;
+  localHost = true;
+  hostOverlay: {
+    playPackage?: PlayPackage | null;
+    controllerSignal?: Signal | null;
+    activeLine?: number | null;
+    greens?: number[];
+    frameStartedAt?: number | null;
+    signals?: Record<string, Signal | null>;
+    hostNow?: number;
+  } | null = null;
   lastActivity = Date.now();
   rng: () => number = Math.random;
 
@@ -160,7 +170,7 @@ export class Room {
     return [...this.controllers].some((socket) => socket.readyState === WebSocket.OPEN);
   }
 
-  start() {
+  start(local = true) {
     const needed = neededPhones(this.config);
     if (!this.hasController() || this.connectedCount() !== needed - 1 || this.displays.size !== needed - 1) {
       this.broadcast();
@@ -169,19 +179,29 @@ export class Room {
     this.clearTimer();
     this.counts = activeCounts(this.config);
     this.config.running = true;
+    this.localHost = local !== false;
     this.packageIndex = 0;
-    this.playPackage = {
-      intervalMs: this.config.intervalSeconds * 1000,
-      frames: this.buildFrames(Date.now(), PACKAGE_LAPS),
-    };
+    this.playPackage = null;
+    this.hostOverlay = null;
+    this.controllerSignal = null;
+    this.activeLine = null;
+    this.greens = [];
+    this.signals.clear();
+    this.frameStartedAt = null;
     this.touch();
-    const first = this.playPackage.frames[0];
-    if (!first) {
-      this.stop();
-      return;
+    if (!this.localHost) {
+      this.playPackage = {
+        intervalMs: this.config.intervalSeconds * 1000,
+        frames: this.buildFrames(Date.now(), PACKAGE_LAPS),
+      };
+      const first = this.playPackage.frames[0];
+      if (!first) {
+        this.stop();
+        return;
+      }
+      this.applyFrame(first);
+      this.armPackage();
     }
-    this.applyFrame(first);
-    this.armPackage();
     this.broadcast();
   }
 
@@ -195,15 +215,35 @@ export class Room {
     this.frameStartedAt = null;
     this.playPackage = null;
     this.packageIndex = 0;
+    this.hostOverlay = null;
     this.touch();
     this.broadcast();
   }
 
-  private computeSignals(line: number, greenAt: number): Record<string, Signal | null> {
+  hostPush(overlay: NonNullable<Room["hostOverlay"]>) {
+    this.hostOverlay = { ...(this.hostOverlay || {}), ...overlay };
+    if (overlay.playPackage !== undefined) this.playPackage = overlay.playPackage;
+    if (overlay.signals) {
+      this.signals.clear();
+      this.controllerSignal = overlay.signals[CONTROLLER_ID] ?? null;
+      for (const [id, signal] of Object.entries(overlay.signals)) {
+        if (id === CONTROLLER_ID) continue;
+        this.signals.set(id, signal);
+      }
+    }
+    if (overlay.activeLine !== undefined) this.activeLine = overlay.activeLine;
+    if (overlay.greens) this.greens = [...overlay.greens];
+    if (overlay.frameStartedAt !== undefined) this.frameStartedAt = overlay.frameStartedAt;
+    this.touch();
+    this.broadcast();
+  }
+
+  /** 全体セット同時表示。各列に緑1・ほか赤 */
+  private computeSignals(greens: number[]): Record<string, Signal | null> {
     const signals: Record<string, Signal | null> = {};
     for (const slot of slotsFor(this.counts)) {
-      const signal: Signal | null =
-        slot.row === line + 1 ? (slot.index === greenAt ? "green" : "red") : null;
+      const greenAt = greens[slot.row - 1] ?? 0;
+      const signal: Signal = slot.index === greenAt ? "green" : "red";
       if (slot.controller) {
         signals[CONTROLLER_ID] = signal;
         continue;
@@ -220,15 +260,13 @@ export class Room {
     let at = startAt;
     for (let lap = 0; lap < laps; lap++) {
       const greens = buildPass(this.counts, this.rng);
-      for (let line = 0; line < this.counts.length; line++) {
-        frames.push({
-          frameStartedAt: at,
-          activeLine: line,
-          greens: [...greens],
-          signals: this.computeSignals(line, greens[line] ?? 0),
-        });
-        at += intervalMs;
-      }
+      frames.push({
+        frameStartedAt: at,
+        activeLine: 0,
+        greens: [...greens],
+        signals: this.computeSignals(greens),
+      });
+      at += intervalMs;
     }
     return frames;
   }
@@ -309,22 +347,34 @@ export class Room {
   }
 
   snapshot(): RoomSnapshot {
+    const host = this.hostOverlay;
+    const running = this.config.running;
     const displays: DisplayInfo[] = [...this.displays.values()].map((d) => ({
       id: d.id,
       label: d.label,
       place: d.place,
       connected: !!d.socket && d.socket.readyState === WebSocket.OPEN,
-      signal: this.config.running ? (this.signals.get(d.id) ?? null) : null,
+      signal: running
+        ? (host?.signals?.[d.id] ?? this.signals.get(d.id) ?? null)
+        : null,
     }));
     return {
       code: this.code,
       config: this.config,
       displays,
-      controllerSignal: this.config.running ? this.controllerSignal : null,
-      activeLine: this.config.running ? this.activeLine : null,
-      frameStartedAt: this.config.running ? this.frameStartedAt : null,
-      playPackage: this.config.running ? this.playPackage : null,
-      serverNow: Date.now(),
+      controllerSignal: running
+        ? host?.controllerSignal !== undefined
+          ? host.controllerSignal
+          : this.controllerSignal
+        : null,
+      activeLine: running ? (host?.activeLine ?? this.activeLine) : null,
+      frameStartedAt: running ? (host?.frameStartedAt ?? this.frameStartedAt) : null,
+      playPackage: running
+        ? host?.playPackage !== undefined
+          ? host.playPackage
+          : this.playPackage
+        : null,
+      serverNow: host?.hostNow ?? Date.now(),
     };
   }
 

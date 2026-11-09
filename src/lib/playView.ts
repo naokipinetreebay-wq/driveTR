@@ -9,17 +9,31 @@ export type DrivePlayView = {
   usingPackage: boolean;
 };
 
-function frameAt(pkg: NonNullable<RoomSnapshot["playPackage"]>, now: number): PlayFrame | null {
+/** パッケージがあるときは端末時計で列信号を進める。尽きたらループ */
+function frameAt(
+  pkg: NonNullable<RoomSnapshot["playPackage"]>,
+  now: number
+): { frame: PlayFrame; loopOffset: number } | null {
   if (!pkg.frames.length) return null;
-  let frame = pkg.frames[0];
+  const first = pkg.frames[0];
+  const last = pkg.frames[pkg.frames.length - 1];
+  const span = Math.max(1, last.frameStartedAt + pkg.intervalMs - first.frameStartedAt);
+  let t = now;
+  let loopOffset = 0;
+  if (now > last.frameStartedAt + pkg.intervalMs) {
+    const elapsed = now - first.frameStartedAt;
+    const cycles = Math.floor(elapsed / span);
+    loopOffset = cycles * span;
+    t = first.frameStartedAt + (elapsed % span);
+  }
+  let frame = first;
   for (const f of pkg.frames) {
-    if (f.frameStartedAt <= now) frame = f;
+    if (f.frameStartedAt <= t) frame = f;
     else break;
   }
-  return frame;
+  return { frame, loopOffset };
 }
 
-/** パッケージがあるときは端末時計で列信号を進める */
 export function useDrivePlayView(
   snapshot: RoomSnapshot | null,
   deviceId: string | "controller"
@@ -65,8 +79,8 @@ export function useDrivePlayView(
 
   void tick;
   const now = Date.now() + skewRef.current;
-  const frame = frameAt(pkg, now);
-  if (!frame) {
+  const resolved = frameAt(pkg, now);
+  if (!resolved) {
     return {
       signal: null,
       activeLine: null,
@@ -75,10 +89,11 @@ export function useDrivePlayView(
       usingPackage: true,
     };
   }
+  const { frame, loopOffset } = resolved;
   return {
     signal: frame.signals[deviceId] ?? null,
     activeLine: frame.activeLine,
-    frameStartedAt: frame.frameStartedAt,
+    frameStartedAt: frame.frameStartedAt + loopOffset,
     running: true,
     usingPackage: true,
   };

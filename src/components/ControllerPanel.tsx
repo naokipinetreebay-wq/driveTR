@@ -23,12 +23,14 @@ export function ControllerPanel({
   send,
   clearSessionKeys,
   onStart,
+  onStop,
 }: {
   snapshot: RoomSnapshot;
   connected: boolean;
   send: (msg: ClientMessage) => void;
   clearSessionKeys?: string[];
-  onStart: () => void;
+  onStart?: () => void;
+  onStop?: () => void;
 }) {
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
@@ -74,13 +76,20 @@ export function ControllerPanel({
             className="btn primary"
             disabled={!ready || cfg.running}
             onClick={() => {
-              send({ type: "start" });
-              onStart();
+              if (onStart) onStart();
+              else send({ type: "start", local: true });
             }}
           >
             開始
           </button>
-          <button type="button" className="btn danger" onClick={() => send({ type: "stop" })}>
+          <button
+            type="button"
+            className="btn danger"
+            onClick={() => {
+              if (onStop) onStop();
+              else send({ type: "stop" });
+            }}
+          >
             停止
           </button>
         </div>

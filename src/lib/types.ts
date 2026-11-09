@@ -51,8 +51,20 @@ export type ClientMessage =
   | { type: "hello"; role: Role; deviceId: string; label?: string }
   | { type: "updateConfig"; config: Partial<RoomConfig> }
   | { type: "setLabel"; deviceId: string; label: string }
-  | { type: "start" }
+  | { type: "start"; local?: boolean }
   | { type: "stop" }
+  | {
+      type: "hostPush";
+      overlay: {
+        playPackage?: PlayPackage | null;
+        controllerSignal?: Signal | null;
+        activeLine?: number | null;
+        greens?: number[];
+        frameStartedAt?: number | null;
+        signals?: Record<string, Signal | null>;
+        hostNow?: number;
+      };
+    }
   | { type: "ping" };
 
 export type ServerMessage =

@@ -133,10 +133,13 @@ app.prepare().then(() => {
             if (role === "controller") r.setLabel(msg.deviceId, msg.label);
             break;
           case "start":
-            if (role === "controller") r.start();
+            if (role === "controller") r.start(msg.local !== false);
             break;
           case "stop":
             if (role === "controller") r.stop();
+            break;
+          case "hostPush":
+            if (role === "controller") r.hostPush(msg.overlay || {});
             break;
           case "ping":
             r.touch();
